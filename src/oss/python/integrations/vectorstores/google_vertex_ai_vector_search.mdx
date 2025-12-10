@@ -35,7 +35,12 @@ Vector Search 2.0 uses Collections to store Data Objects. Each Data Object conta
 
 ## Prerequisites
 
-- Google Cloud project with Vertex AI API enabled
+- Google Cloud project with Vertex AI API and Vector Search APIs enabled
+
+    ```bash
+    gcloud services enable vectorsearch.googleapis.com aiplatform.googleapis.com --project "{PROJECT_ID}"
+    ```
+
 - Vector Search Collection created (see [Creating a Collection](#creating-a-collection-v2))
 - Appropriate IAM permissions (`Vertex AI User` role or equivalent)
 
