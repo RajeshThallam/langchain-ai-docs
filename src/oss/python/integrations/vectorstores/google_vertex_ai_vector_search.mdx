@@ -313,42 +313,82 @@ except Exception as e:
 
 ## Advanced Features
 
-### Hybrid Search
+Vector Search 2.0 offers several advanced search capabilities that go beyond traditional dense vector search.
 
-Vector Search 2.0 supports hybrid search combining dense and sparse vectors. Your Collection schema must include both dense and sparse vector fields.
+### Semantic Search
+
+Semantic search automatically generates embeddings from your query text using Vertex AI models. Your collection must be configured with `vertex_embedding_config` in the vector schema.
 
 ```python
-# Dense embedding (standard)
-dense_embedding = embeddings.embed_query("machine learning")
-
-# Sparse embedding (e.g., from BM25 or learned sparse encoder)
-sparse_embedding = {
-    "values": [0.9, 0.3, 0.7],  # Sparse values
-    "indices": [3, 20, 45]       # Corresponding indices
-}
-
-# Hybrid search with RRF (Reciprocal Rank Fusion)
-results = vector_store.similarity_search_by_vector_with_score(
-    embedding=dense_embedding,
-    sparse_embedding=sparse_embedding,
+# Semantic search with auto-generated embeddings
+results = vector_store.semantic_search(
+    query="Tell me about animals",
     k=5,
-    rrf_ranking_alpha=0.7  # 70% dense, 30% sparse
+    search_field="embedding",  # Vector field with auto-embedding config
+    task_type="RETRIEVAL_QUERY",  # Optimizes embeddings for search queries
+    filter={"category": {"$eq": "wildlife"}}  # Optional filtering
 )
 
-# Results include both scores
-for doc, scores in results:
-    print(f"Dense score: {scores['dense_score']}")
-    print(f"Sparse score: {scores['sparse_score']}")
+for doc in results:
+    print(f"Content: {doc.page_content}")
+    print(f"Metadata: {doc.metadata}\n")
+```
+
+**Task types:**
+- `RETRIEVAL_QUERY`: For search queries (default)
+- `RETRIEVAL_DOCUMENT`: For document indexing
+- `SEMANTIC_SIMILARITY`: For semantic similarity tasks
+- `CLASSIFICATION`: For classification tasks
+- `CLUSTERING`: For clustering tasks
+
+### Text Search
+
+Text search performs keyword/full-text matching on data fields without using embeddings.
+
+```python
+# Keyword search on data fields
+results = vector_store.text_search(
+    query="Python programming",
+    k=10,
+    data_field_names=["page_content", "title"]  # Fields to search in
+)
+
+for doc in results:
     print(f"Content: {doc.page_content}\n")
 ```
 
-**RRF ranking alpha parameter:**
-- `1.0`: Only dense search
-- `0.0`: Only sparse search
-- `0.5`: Equal weighting
-- `0.7`: 70% dense, 30% sparse
+!!! note
+    Text search does not support filters. Use `semantic_search()` or `similarity_search()` if you need filtering.
 
-See the [hybrid search documentation](https://cloud.google.com/vertex-ai/docs/vector-search/about-hybrid-search) for more information.
+### Hybrid Search
+
+Hybrid search combines semantic search (with auto-generated embeddings) and text search (keyword matching) using Reciprocal Rank Fusion (RRF) to produce optimally ranked results.
+
+```python
+# Hybrid search: semantic understanding + keyword matching
+results = vector_store.hybrid_search(
+    query="Men's outfit for beach",
+    k=10,
+    search_field="embedding",  # Vector field with auto-embedding config
+    data_field_names=["page_content"],  # Fields for text search
+    task_type="RETRIEVAL_QUERY",
+    filter={"price": {"$lt": 100}},  # Optional filter for semantic search
+    semantic_weight=1.0,  # Weight for semantic results
+    text_weight=1.0  # Weight for keyword results
+)
+
+for doc in results:
+    print(f"Content: {doc.page_content}\n")
+```
+
+**Weight parameters:**
+- Higher `semantic_weight`: Prioritizes semantic understanding
+- Higher `text_weight`: Prioritizes exact keyword matches
+- Equal weights (default): Balanced results
+
+Products appearing high in both semantic and text search results will rank highest in the merged results.
+
+See the [Vector Search 2.0 documentation](https://cloud.google.com/vertex-ai/docs/vector-search/overview) for more information.
 
 ### Custom Vector Field Names
 
